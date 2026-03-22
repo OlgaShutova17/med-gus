@@ -132,6 +132,14 @@ yandex-wiki-catalog/homepage/
 
 ---
 
+## Деплой
+
+| Файл | Описание |
+|---|---|
+| [Деплой MVP на Selectel](yandex-wiki-catalog/homepage/deployment/selectel-mvp.md) | Пошаговая инструкция: PostgreSQL + FastAPI backend (auth + themes) + Next.js frontend на одном сервере через Docker Compose |
+
+---
+
 ## Ключевая идея продукта
 
 Большинство медицинских приложений организуют данные как:
