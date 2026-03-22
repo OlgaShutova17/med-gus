@@ -1,5 +1,43 @@
 ---
-title: Структура таблиц (DDL)
+title: Схема БД — Целевая (полная)
+---
+
+MVP-схема (без каталога параметров и Knowledge Graph) описана в `db-mvp.md`.
+
+---
+
+## ER-диаграмма
+
+```
+User ──────────────────────────────────────────────────┐
+ └── UserProfile (1:1)                                  │
+ └── Themes (1:N)                                       │
+       ├── ThemeSymptoms → Symptoms                     │
+       ├── Hypotheses (1:N)                             │
+       │     └── TreatmentCourses (1:N)                 │
+       │               └── Medications → Drugs          │
+       └── Events (1:N) ──────────────────────────────┐ │
+             ├── Consultation                          │ │
+             ├── AnalysisResult → AnalysisValues       │ │
+             │     └── MedicalParameter                │ │
+             │           ├── ParameterAliases          │ │
+             │           ├── ParameterUnits            │ │
+             │           └── ReferenceRanges           │ │
+             ├── Research                              │ │
+             ├── EventHypotheses → Hypotheses          │ │
+             ├── Resolution (1:1)                      │ │
+             └── Files (через FileLinks) ──────────────┘ │
+                   └────────────────────────────────────┘
+
+Knowledge Graph:
+  Diseases ←── SymptomDisease ── Symptoms
+  Diseases ←── AnalysisDisease ── MedicalParameters
+  Diseases ←── TreatmentDisease ── Treatments
+
+AI:
+  AIInsights → AIRecommendations
+```
+
 ---
 
 ## USERS
@@ -287,6 +325,133 @@ CREATE TABLE ai_recommendations (
 
 ---
 
+## USER_PROFILES (расширенный профиль)
+
+```sql
+CREATE TABLE user_profiles (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID REFERENCES users(id) ON DELETE CASCADE,
+    height              NUMERIC,
+    weight              NUMERIC,
+    blood_type          TEXT,
+    chronic_conditions  TEXT,
+    allergies           TEXT
+);
+```
+
+---
+
+## PARAMETER_ALIASES (нормализация названий)
+
+Позволяет сопоставлять Hb / HGB / Гемоглобин → HEMOGLOBIN.
+
+```sql
+CREATE TABLE parameter_aliases (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parameter_id UUID REFERENCES medical_parameters(id) ON DELETE CASCADE,
+    alias        TEXT NOT NULL,
+    language     TEXT  -- ru, en, latin
+);
+```
+
+---
+
+## PARAMETER_UNITS (единицы измерения)
+
+```sql
+CREATE TABLE parameter_units (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parameter_id      UUID REFERENCES medical_parameters(id),
+    unit              TEXT NOT NULL,
+    conversion_factor NUMERIC  -- для перевода в базовую единицу
+);
+```
+
+---
+
+## REFERENCE_RANGES (нормы по полу и возрасту)
+
+```sql
+CREATE TABLE reference_ranges (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parameter_id UUID REFERENCES medical_parameters(id),
+    sex          TEXT,     -- male | female | any
+    age_min      INT,
+    age_max      INT,
+    min_value    NUMERIC NOT NULL,
+    max_value    NUMERIC NOT NULL,
+    unit         TEXT
+);
+```
+
+---
+
+## DRUGS (каталог препаратов)
+
+```sql
+CREATE TABLE drugs (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name             TEXT NOT NULL,
+    active_substance TEXT
+);
+```
+
+---
+
+## FILE_LINKS (полиморфная привязка файлов)
+
+Заменяет прямой `event_id` в `files` — позволяет привязывать файл к любой сущности.
+
+```sql
+CREATE TABLE file_links (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    file_id     UUID REFERENCES files(id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL,  -- event | consultation | research | analysis
+    entity_id   UUID NOT NULL
+);
+```
+
+---
+
+## KNOWLEDGE GRAPH
+
+Основа AI-рассуждений: связи симптомов, параметров и заболеваний.
+
+```sql
+CREATE TABLE diseases (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL,
+    icd_code    TEXT,
+    description TEXT
+);
+
+-- вес связи symptom → disease
+CREATE TABLE symptom_disease (
+    symptom_id UUID REFERENCES symptoms(id),
+    disease_id UUID REFERENCES diseases(id),
+    weight     NUMERIC,
+    PRIMARY KEY (symptom_id, disease_id)
+);
+
+-- вес связи analysis_parameter → disease
+CREATE TABLE analysis_disease (
+    parameter_id UUID REFERENCES medical_parameters(id),
+    disease_id   UUID REFERENCES diseases(id),
+    weight       NUMERIC,
+    PRIMARY KEY (parameter_id, disease_id)
+);
+
+-- эффективность лечения при заболевании
+CREATE TABLE treatment_disease (
+    treatment_id  UUID REFERENCES treatment_courses(id),
+    disease_id    UUID REFERENCES diseases(id),
+    effectiveness NUMERIC,
+    PRIMARY KEY (treatment_id, disease_id)
+);
+```
+
+---
+
 ## Индексы
 
 ```sql
@@ -296,4 +461,8 @@ CREATE INDEX idx_events_type   ON events(type);
 
 CREATE INDEX idx_analysis_results_param    ON analysis_results(parameter_name);
 CREATE INDEX idx_analysis_results_analysis ON analysis_results(analysis_id);
+
+CREATE INDEX idx_param_aliases  ON parameter_aliases(alias);
+CREATE INDEX idx_ref_ranges     ON reference_ranges(parameter_id, sex);
+CREATE INDEX idx_file_links     ON file_links(entity_type, entity_id);
 ```
