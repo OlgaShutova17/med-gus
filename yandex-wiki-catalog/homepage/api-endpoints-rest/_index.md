@@ -1,167 +1,72 @@
 ---
 title: API Endpoints (REST)
-order: 1
 ---
 
-Базовый путь:
-
-```
-/api/v1
-```
+Базовый путь: `/api/v1`
 
 ---
 
 ## AUTH
 
-### регистрация
-
 ```
-POST /auth/register
-```
-
-body
-
-```
-email
-password
-name
-```
-
----
-
-### login
-
-```
-POST /auth/login
-```
-
-response
-
-```
-access_token
-refresh_token
+POST /auth/register      # email, password, name
+POST /auth/login         # → access_token, refresh_token
+POST /auth/logout
+GET  /auth/me
 ```
 
 ---
 
 ## USERS
 
-### профиль
-
 ```
-GET /users/me
-```
-
----
-
-### обновление профиля
-
-```
+GET   /users/me
 PATCH /users/me
 ```
 
 ---
 
-## THEMES
-
-### список тематик
+## THEMES (проблемы)
 
 ```
-GET /themes
-```
-
----
-
-### создать тематику
-
-```
-POST /themes
-```
-
-body
-
-```
-title
-description
+GET    /themes
+POST   /themes           # title, description
+GET    /themes/{id}
+PATCH  /themes/{id}
+DELETE /themes/{id}
 ```
 
 ---
 
-### получить тематику
+## SYMPTOMS
 
 ```
-GET /themes/{theme_id}
-```
-
----
-
-### удалить тематику
-
-```
-DELETE /themes/{theme_id}
+GET    /symptoms
+POST   /themes/{id}/symptoms
+DELETE /themes/{id}/symptoms/{symptom_id}
 ```
 
 ---
 
 ## HYPOTHESES
 
-### список гипотез
-
 ```
-GET /themes/{theme_id}/hypotheses
-```
-
----
-
-### создать гипотезу
-
-```
-POST /themes/{theme_id}/hypotheses
-```
-
----
-
-### изменить статус гипотезы
-
-```
-PATCH /hypotheses/{id}
+GET    /themes/{id}/hypotheses
+POST   /themes/{id}/hypotheses
+PATCH  /hypotheses/{id}          # изменение статуса
+DELETE /hypotheses/{id}
 ```
 
 ---
 
 ## EVENTS
 
-### список событий
-
 ```
-GET /themes/{theme_id}/events
-```
-
-filters
-
-```
-type
-date_from
-date_to
-```
-
----
-
-### создать событие
-
-```
-POST /events
-```
-
-body
-
-```
-theme_id
-hypothesis_id
-type
-title
-event_date
-notes
+GET    /themes/{id}/events       # ?type=&date_from=&date_to=
+POST   /themes/{id}/events       # theme_id, hypothesis_id, type, title, event_date, notes
+GET    /events/{id}
+PATCH  /events/{id}
+DELETE /events/{id}
 ```
 
 ---
@@ -169,59 +74,9 @@ notes
 ## CONSULTATIONS
 
 ```
-POST /events/{event_id}/consultation
-```
-
----
-
-## ANALYSES
-
-### добавить анализ
-
-```
-POST /events/{event_id}/analysis
-```
-
----
-
-### добавить показатель анализа
-
-```
-POST /analyses/{analysis_id}/results
-```
-
-body
-
-```
-parameter_name
-value
-unit
-reference_min
-reference_max
-```
-
----
-
-## ДИНАМИКА АНАЛИЗОВ
-
-```
-GET /analysis-results/dynamics
-```
-
-query
-
-```
-parameter_name
-period
-```
-
-response
-
-```
-date
-value
-reference_min
-reference_max
+POST  /events/{id}/consultation
+GET   /consultations/{id}
+PATCH /consultations/{id}
 ```
 
 ---
@@ -229,91 +84,133 @@ reference_max
 ## RESEARCH
 
 ```
-POST /events/{event_id}/research
+POST  /events/{id}/research
+GET   /research/{id}
+PATCH /research/{id}
+```
+
+---
+
+## ANALYSES
+
+```
+GET   /analyses
+GET   /analyses/{id}
+POST  /events/{id}/analysis
+```
+
+---
+
+## ANALYSIS RESULTS (показатели)
+
+```
+GET  /analysis-results/{id}
+POST /events/{id}/analysis
+```
+
+---
+
+## ANALYSIS VALUES (значения показателей)
+
+```
+POST   /analysis-results/{id}/values    # parameter_name, value, unit, reference_min, reference_max
+PATCH  /analysis-values/{id}
+DELETE /analysis-values/{id}
+```
+
+---
+
+## ДИНАМИКА АНАЛИЗОВ
+
+```
+GET /analysis-results/dynamics    # ?parameter_name=&period=
+```
+
+Response:
+```
+date, value, reference_min, reference_max
+```
+
+---
+
+## ANALYTICS / PARAMETERS
+
+```
+GET /parameters
+GET /parameters/{id}
+GET /users/{id}/parameters/{parameter_id}/history
 ```
 
 ---
 
 ## FILES
 
-### загрузка файла
-
 ```
-POST /files
-```
-
-multipart
-
----
-
-## RESOLUTION
-
-```
-POST /events/{event_id}/resolution
-```
-
-body
-
-```
-result
-comment
+POST   /files/upload    # multipart
+GET    /files/{id}
+DELETE /files/{id}
 ```
 
 ---
 
-## TREATMENT COURSES
-
-### создать курс
+## RESOLUTIONS
 
 ```
-POST /hypotheses/{id}/courses
+POST /events/{id}/resolution    # result: helped|not_helped, comment
 ```
 
 ---
 
-### добавить препарат
+## TREATMENT
 
 ```
-POST /courses/{id}/medications
-```
-
----
-
-## AI endpoints
-
-### анализ результатов
-
-```
-POST /ai/analyze-analysis
+GET   /themes/{id}/treatments
+POST  /themes/{id}/treatments
+PATCH /treatments/{id}
 ```
 
 ---
 
-### рекомендации врача
+## MEDICATIONS
 
 ```
-POST /ai/recommend-specialist
+POST   /treatments/{id}/medications    # name, dosage, frequency
+PATCH  /medications/{id}
+DELETE /medications/{id}
 ```
 
 ---
 
-## 5. Архитектурная особенность
+## AI
 
-Главный endpoint для UI — **timeline**.
+```
+POST /ai/parse-analysis              # OCR-разбор загруженного документа
+GET  /themes/{id}/insights           # AI-инсайты по тематике
+GET  /themes/{id}/recommendations    # рекомендации специалистов
+POST /ai/chat                        # { message, theme_id, context }
+```
+
+---
+
+## DASHBOARD
+
+```
+GET /dashboard    # → themes, recent_events, insights, alerts
+```
+
+---
+
+## Архитектурная особенность
+
+Главный endpoint для UI — **timeline**:
 
 ```
 GET /themes/{id}/timeline
 ```
 
-Ответ:
-
+Response:
 ```
-events
-consultations
-analyses
-research
-resolutions
-files
+events, consultations, analyses, research, resolutions, files
 ```
 
-UI строится **вокруг хронологической ленты**.
+UI строится вокруг хронологической ленты событий.
