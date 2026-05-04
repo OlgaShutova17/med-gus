@@ -137,6 +137,7 @@ yandex-wiki-catalog/homepage/
 | Файл | Описание |
 |---|---|
 | [MVP мобильного приложения](yandex-wiki-catalog/homepage/mobile/mobile-mvp.md) | Состав релиза v1.0, технологический стек (React Native + Expo), архитектура, экранный флоу, план разработки на 8 недель, метрики успеха |
+| [Figma — промпт для дизайна мобайла](yandex-wiki-catalog/homepage/mobile/figma-mobile-prompt.md) | Готовый промпт для Figma AI: дизайн-система «Морская волна», маскот Гусик (5 вариантов), 11 экранов v1.0, 18 компонентов, пустые состояния, анимации |
 
 ---
 
